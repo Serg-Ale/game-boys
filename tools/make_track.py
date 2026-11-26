@@ -8,14 +8,15 @@ import random
 from PIL import Image, ImageDraw
 from make_sprites import OUT
 
-SIZE = 2048
-HALF = 92       # meia largura da pista
+SIZE = 4096
+HALF = 172      # meia largura da pista
 STEP = 16       # distância entre os pontos do traçado
 
-# Vulcão da Chama: retão, curva longa, "S" e um grampo.
-VOLCANO = [(420, 1640), (420, 1000), (400, 560), (590, 320), (920, 300), (1090, 500), (1280, 650), (1480, 520),
-           (1640, 320), (1800, 470), (1760, 820), (1500, 1010), (1420, 1270), (1720, 1450), (1700, 1740), (1380, 1790),
-           (1100, 1600), (860, 1520), (760, 1760), (560, 1840)]
+# Vulcão da Chama: retão, curvas abertas, "S" duplo, grampo e volta pelo sul.
+VOLCANO = [(560, 3250), (560, 2350), (540, 1500), (600, 850), (950, 480), (1500, 440), (1920, 700), (2200, 1120),
+           (2580, 1180), (2830, 820), (3150, 440), (3590, 540), (3730, 980), (3520, 1430), (3080, 1700), (2900, 2100),
+           (3170, 2420), (3600, 2640), (3720, 3150), (3450, 3600), (2900, 3660), (2540, 3330), (2380, 2820), (1980, 2580),
+           (1600, 2830), (1480, 3340), (1150, 3680), (730, 3650)]
 
 def spline(points):
     """Catmull-Rom fechado, depois reamostrado em passos iguais."""
@@ -54,10 +55,10 @@ def volcano():
     n = len(path)
     img = Image.new("RGB", (SIZE, SIZE), (52, 24, 24))
     d = ImageDraw.Draw(img)
-    for _ in range(5200):  # rochas no chão
+    for _ in range(21000):  # rochas no chão
         x, y, r = rng.randrange(SIZE), rng.randrange(SIZE), rng.randint(5, 22)
         d.ellipse((x - r, y - r, x + r, y + r), fill=rng.choice([(66, 30, 28), (40, 18, 20), (76, 38, 30), (58, 28, 26)]))
-    for _ in range(90):  # lagos de lava
+    for _ in range(340):  # lagos de lava
         x, y, r = rng.randrange(SIZE), rng.randrange(SIZE), rng.randint(26, 80)
         for color, k in (((120, 30, 10), 1.25), ((224, 84, 16), 1.0), ((255, 168, 40), 0.6), ((255, 230, 120), 0.22)):
             d.ellipse((x - r * k, y - r * k * 0.8, x + r * k, y + r * k * 0.8), fill=color)
@@ -71,12 +72,17 @@ def volcano():
             d.polygon([(a[0] + na[0] * width, a[1] + na[1] * width), (b[0] + nb[0] * width, b[1] + nb[1] * width),
                        (b[0] - nb[0] * width, b[1] - nb[1] * width), (a[0] - na[0] * width, a[1] - na[1] * width)], fill=color)
 
+    # Nenhum trecho pode encostar em outro.
+    for i in range(0, n, 4):
+        for j in range(i + 4, n, 4):
+            if min(j - i, n - (j - i)) * STEP > 900:
+                assert math.dist(path[i], path[j]) > 2 * HALF + 90, ("trechos colados", path[i], path[j], math.dist(path[i], path[j]))
     band(HALF + 54, (96, 66, 52))                            # acostamento de cinzas
     band(HALF + 16, (236, 236, 228))                         # zebras
     band(HALF + 16, (206, 40, 32), lambda i: i % 6 < 3)
     band(HALF, (92, 84, 92))                                 # pista
     band(HALF - 12, (102, 94, 104), lambda i: i % 8 < 4)
-    for _ in range(9000):
+    for _ in range(60000):
         i = rng.randrange(n)
         (nx, ny), _t = normal(path, i)
         off = rng.uniform(-HALF + 4, HALF - 4)
@@ -97,26 +103,28 @@ def volcano():
             quad(0, (row * size - 20, (row + 1) * size - 20), (-HALF + col * size, -HALF + (col + 1) * size),
                  (240, 240, 240) if (row + col) % 2 else (20, 18, 24))
 
-    boosts = [int(n * f) for f in (0.12, 0.47, 0.8)]
+    boosts = [int(n * f) for f in (0.07, 0.24, 0.46, 0.63, 0.88)]
     for i in boosts:  # setas de turbo
         for k in range(3):
             (nx, ny), (tx, ty) = normal(path, i)
             px, py = path[i]
-            base = k * 26 - 30
+            base = k * 44 - 50
             d.polygon([(px + tx * (base + a) + nx * c, py + ty * (base + a) + ny * c) for a, c in
-                       ((0, -46), (24, 0), (0, 46), (0, 28), (10, 0), (0, -28))], fill=(80, 230, 255))
+                       ((0, -86), (40, 0), (0, 86), (0, 54), (16, 0), (0, -54))], fill=(80, 230, 255))
 
     props = []
     for i in range(0, n, 5):  # tochas, rochas e pilares à beira da pista
         (nx, ny), _t = normal(path, i)
         for side in (-1, 1):
-            off = side * (HALF + rng.randint(60, 120))
+            off = side * (HALF + (62 if i % 10 == 0 else rng.randint(80, 230)))
             x, y = path[i][0] + nx * off, path[i][1] + ny * off
-            if min(math.dist((x, y), p) for p in path) > HALF + 40:
+            if min(math.dist((x, y), p) for p in path[::2]) > HALF + 50:
                 kind = "torch" if i % 10 == 0 else rng.choice(["rock", "rock", "spire"])
                 props.append([round(x), round(y), kind])
     img.save(OUT / "kart" / "track_fire.png")
-    data = {"name": "Vulcão da Chama", "clan": "fire", "half": HALF, "size": SIZE, "boosts": boosts,
+    orbs = [int(n * f) for f in (0.15, 0.35, 0.55, 0.75, 0.94)]  # fileiras de orbes de poder
+    arches = [0] + [int(n * f) for f in (0.2, 0.4, 0.6, 0.82)]  # portais sobre a pista
+    data = {"name": "Vulcão da Chama", "clan": "fire", "half": HALF, "size": SIZE, "boosts": boosts, "orbs": orbs, "arches": arches,
             "path": [[round(x, 1), round(y, 1)] for x, y in path], "props": props}
     (OUT / "kart" / "track_fire.json").write_text(json.dumps(data))
     print(n, "pontos,", len(props), "objetos, comprimento", n * STEP)

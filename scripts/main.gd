@@ -176,7 +176,7 @@ func _start_race() -> void:
 	shake = 0
 	race = RaceView.new()
 	add_child(race)
-	race.setup(menu.picks[0], audio)
+	race.setup(menu.picks[0], audio, sprites)
 	audio.play_music(Data.FIGHTERS[menu.picks[0]].clan)
 	queue_redraw()
 

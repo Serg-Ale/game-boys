@@ -8,10 +8,10 @@ const COUNTDOWN := 180
 const DRIFT_LEVELS := [40.0, 95.0, 165.0] # carga para turbo azul, laranja e roxo
 const DRIFT_BOOSTS := [32, 55, 85]        # frames de turbo de cada nível
 const PERFECT_START := [20, 55]           # acelerar quando faltam esses frames dá arrancada
-const PAD_BOOST := 40
+const PAD_BOOST := 45
 const BOOST_FACTOR := 1.38
 const OFFROAD_FACTOR := 0.5
-const WALL := 185.0                       # além da borda da pista, uma parede invisível
+const WALL := 130.0                       # além da borda da pista, uma parede invisível
 
 var track: Dictionary
 var path := PackedVector2Array()
@@ -38,6 +38,12 @@ var lap_started := 0
 var lap_times: Array = []
 var finished := false
 var wrong_way := 0
+var factor := 1.0        # ajuste de velocidade: habilidade da CPU, elástico e transformação
+var lane := 0.0          # faixa preferida pelo piloto automático
+var stun := 0            # rodando depois de um golpe
+var slowed := 0
+var shield := 0
+var cruise := false      # depois da chegada segue sozinho
 var distance_run := 0.0
 var events: Array = []   # sons e avisos; quem desenha esvazia
 var _was_accel := false
@@ -53,9 +59,9 @@ func _init(track_data: Dictionary, fighter_id: String) -> void:
 	var stats: Dictionary = Data.FIGHTERS[fighter_id]
 	var weight: float = stats.get("weight", 0)
 	# Pesados correm mais; leves aceleram e viram melhor.
-	max_speed = 7.0 + weight * 0.13
-	accel = 0.12 - weight * 0.01
-	turn = 0.041 - weight * 0.0013 + (stats.walk - 4.3) * 0.0012
+	max_speed = 10.4 + weight * 0.17
+	accel = 0.16 - weight * 0.012
+	turn = 0.040 - weight * 0.0012 + (stats.walk - 4.3) * 0.0011
 	index = path.size() - 5
 	pos = path[index]
 	heading = (path[(index + 3) % path.size()] - pos).angle()
@@ -77,23 +83,33 @@ func step(input: Dictionary) -> void:
 		gas = false
 		drifting = false
 		steer = clampf(angle_difference(heading, _aim(8)) * 2.5, -1.0, 1.0) # segue sozinho depois da chegada
-		speed = move_toward(speed, 3.5, 0.08)
+		speed = move_toward(speed, 4.5, 0.08)
+	slowed = maxi(slowed - 1, 0)
+	shield = maxi(shield - 1, 0)
+	if stun > 0: # sem controle: perde velocidade até parar de rodar
+		stun -= 1
+		gas = false
+		drifting = false
+		steer = 0.0
+		boost = 0
+		drift = 0
+		speed = move_toward(speed, 2.0, 0.3)
 	hop = maxi(hop - 1, 0)
 
-	var top := max_speed * (OFFROAD_FACTOR if offroad and boost == 0 else 1.0)
+	var top := max_speed * factor * (OFFROAD_FACTOR if offroad and boost == 0 else 1.0) * (0.6 if slowed > 0 and boost == 0 else 1.0)
 	if boost > 0:
 		boost -= 1
-		top = max_speed * BOOST_FACTOR
-		speed = move_toward(speed, top, 0.35)
+		top = max_speed * factor * BOOST_FACTOR
+		speed = move_toward(speed, top, 0.5)
 	elif gas:
 		if speed < top:
 			speed = move_toward(speed, top, accel * (1.0 - clampf(speed / top, 0.0, 1.0) * 0.65))
 	elif input.get("brake", false):
 		speed = maxf(speed - 0.22, -2.2)
-	elif not finished:
-		speed = move_toward(speed, 0.0, 0.05)
+	elif not finished and stun == 0:
+		speed = move_toward(speed, 0.0, 0.06)
 	if speed > top and boost == 0:
-		speed = move_toward(speed, top, 0.28 if offroad else 0.08)
+		speed = move_toward(speed, top, 0.4 if offroad else 0.1)
 
 	_drift_step(drifting)
 	if drift != 0:
@@ -163,7 +179,7 @@ func _follow_track() -> void:
 	var n := path.size()
 	var best := index
 	var best_distance := INF
-	for offset in range(-14, 15):
+	for offset in range(-16, 17):
 		var i := wrapi(index + offset, 0, n)
 		var d := pos.distance_squared_to(path[i])
 		if d < best_distance:
@@ -185,7 +201,7 @@ func _follow_track() -> void:
 			events.append("bump")
 		speed *= 0.5
 	for pad in track.boosts:
-		if absi(index - int(pad)) <= 2 and away < 55.0:
+		if absi(index - int(pad)) <= 2 and away < 110.0:
 			if boost < PAD_BOOST - 10:
 				events.append("boost")
 			boost = maxi(boost, PAD_BOOST)
@@ -216,12 +232,23 @@ func _cross_line() -> void:
 			events.append("lap")
 
 func _aim(ahead: int) -> float:
-	return (path[(index + ahead) % path.size()] - pos).angle()
+	var i := (index + ahead) % path.size()
+	var side := (path[(i + 1) % path.size()] - path[i]).normalized().orthogonal()
+	return (path[i] + side * lane - pos).angle()
+
+# Quanto da corrida já foi feito, em pontos do traçado: serve para a classificação.
+func progress() -> float:
+	var n := path.size()
+	var done := float((lap - 1) * n + index)
+	if lap == 0:
+		done = float(index - n)
+	return done
 
 # Piloto automático: usado nos testes e, depois, pelos corredores da CPU.
 func autopilot() -> Dictionary:
-	var difference := angle_difference(heading, _aim(9))
-	return {"accel": not (absf(difference) > 0.9 and speed > 4.5), "brake": absf(difference) > 0.9 and speed > 4.5,
+	var difference := angle_difference(heading, _aim(7 + int(maxf(speed, 0.0))))
+	var sharp := absf(difference) > 0.75 and speed > 6.5
+	return {"accel": not sharp, "brake": sharp,
 		"steer": clampf(difference * 3.0, -1.0, 1.0), "drift": false}
 
 static func format_time(frames: int) -> String:

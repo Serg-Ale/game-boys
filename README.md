@@ -67,9 +67,9 @@ Testes (um erro de sintaxe pode travar o processo, por isso o `timeout`):
 
 Equilíbrio entre CPUs: `godot --headless --path . --script res://tools/balance.gd`.
 
-## Corrida (protótipo de direção)
+## Corrida
 
-Opção **Corrida** do menu: o ninja corre montado na própria criatura, em pseudo-3D. Por enquanto, uma pista (Vulcão da Chama), 3 voltas, sozinho, sem poderes.
+Opção **Corrida** do menu: 12 ninjas, cada um montado na própria criatura, em pseudo-3D. Pista Vulcão da Chama, 3 voltas (cerca de 1 minuto e 10).
 
 | Ação | Controle | Teclado |
 |---|---|---|
@@ -77,7 +77,16 @@ Opção **Corrida** do menu: o ninja corre montado na própria criatura, em pseu
 | Acelerar | A ou RT | W |
 | Frear / ré | B ou LT | S |
 | Derrapar | RB | K ou Espaço |
+| Usar poder | X | J |
+| Supremo | Y | L |
+| Transformar | L3 / R3 | O |
 
-Segure a derrapagem virando para carregar o turbo (azul, laranja, roxo) e solte. Acelerar quando aparece o "1" dá arrancada. Lógica em `scripts/kart/race.gd`, desenho em `scripts/kart/race_view.gd`, pista em `tools/make_track.py`, montarias em `tools/make_riders.py`. Testes: `tests/test_race.gd`.
+- **Turbos:** derrapar e soltar (azul, laranja, roxo), setas no chão, vácuo atrás de um rival e largada perfeita (acelerar quando aparece o "1").
+- **Poderes (orbes):** Bola de Fogo, Poça de Gelo, Areia Movediça, Rajada, Raio no Líder e Casca de Raízes. Quem está atrás recebe os mais fortes.
+- **Supremo:** enche com derrapagem, orbes e golpes; a criatura derruba os quatro da frente e dá um turbo longo.
+- **Transformação:** uma vez por corrida, a partir da 2ª volta.
+- Vantagem de elemento faz o rival rodar por mais tempo; os pesados empurram os leves.
 
-**Próximos passos combinados:** 12 corredores com CPU, poderes em orbes, supremo, transformação como turbo, e uma pista por clã.
+Lógica de um corredor em `scripts/kart/race.gd`, da corrida inteira em `scripts/kart/grand_prix.gd`, desenho em `scripts/kart/race_view.gd`, pista em `tools/make_track.py`, montarias em `tools/make_riders.py`. Testes: `tests/test_race.gd`.
+
+**Falta:** uma pista por clã, passivas de cada ninja na corrida, campeonato e tela dividida.
