@@ -69,6 +69,29 @@ static func read(player: int) -> Dictionary:
 		result.down = result.down or y > DEADZONE
 	return result
 
+# Comandos da corrida: acelerar, frear, virar (analógico) e derrapar.
+static func read_race() -> Dictionary:
+	var device: Dictionary = devices[0]
+	var result := {"accel": false, "brake": false, "drift": false, "steer": 0.0}
+	if device.layout != "":
+		result.accel = Input.is_physical_key_pressed(KEY_W)
+		result.brake = Input.is_physical_key_pressed(KEY_S)
+		result.drift = Input.is_physical_key_pressed(KEY_K) or Input.is_physical_key_pressed(KEY_SPACE)
+		result.steer = float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A))
+	var pad: int = device.pad
+	if pad >= 0:
+		result.accel = result.accel or Input.is_joy_button_pressed(pad, JOY_BUTTON_A) or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_RIGHT) > 0.25
+		result.brake = result.brake or Input.is_joy_button_pressed(pad, JOY_BUTTON_B) or Input.get_joy_axis(pad, JOY_AXIS_TRIGGER_LEFT) > 0.25
+		result.drift = result.drift or Input.is_joy_button_pressed(pad, JOY_BUTTON_RIGHT_SHOULDER)
+		var x := Input.get_joy_axis(pad, JOY_AXIS_LEFT_X)
+		if absf(x) > 0.15:
+			result.steer = x
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_LEFT):
+			result.steer = -1.0
+		if Input.is_joy_button_pressed(pad, JOY_BUTTON_DPAD_RIGHT):
+			result.steer = 1.0
+	return result
+
 static func uses_pad(player: int) -> bool:
 	return devices[player].pad >= 0
 

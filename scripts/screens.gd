@@ -33,13 +33,13 @@ static func title(canvas: CanvasItem, sprites, menu, time: int) -> void:
 	Look.text(canvas, "O TORNEIO DOS SEIS CLÃS", 480, 185, 20)
 	for i in Menu.OPTIONS.size():
 		var chosen: bool = i == menu.option
-		var y := 214.0 + i * 62
+		var y := 208.0 + i * 56
 		var push := 24.0 if chosen else 0.0
-		_slant(canvas, 60 + push, y, 340, 50, theme.accent if chosen else Color(0, 0, 0, 0.6))
-		Look.text(canvas, Menu.OPTIONS[i].to_upper(), 230 + push, y + 33, 23, theme.dark if chosen else Color(0.8, 0.8, 0.85), Color.WHITE if chosen else Color.BLACK)
+		_slant(canvas, 60 + push, y, 340, 46, theme.accent if chosen else Color(0, 0, 0, 0.6))
+		Look.text(canvas, Menu.OPTIONS[i].to_upper(), 230 + push, y + 31, 22, theme.dark if chosen else Color(0.8, 0.8, 0.85), Color.WHITE if chosen else Color.BLACK)
 	sprites.draw(canvas, key, idle(time), Vector2(700, 480), -1, 6.0)
 	Look.text(canvas, "%s  •  %s" % [info.name.to_upper(), Data.CLAN_NAMES[info.clan].to_upper()], 700, 515, 22, theme.accent)
-	Look.text(canvas, "Direcional / WASD escolhe    A / J / Enter confirma", 230, 515, 15, Color.WHITE, Color.BLACK, false)
+	Look.text(canvas, "Direcional / WASD escolhe    A / J / Enter confirma", 230, 522, 15, Color.WHITE, Color.BLACK, false)
 
 static func select(canvas: CanvasItem, sprites, menu, time: int) -> void:
 	var rival := "CPU" if menu.versus_cpu else "JOGADOR 2"
@@ -55,13 +55,17 @@ static func select(canvas: CanvasItem, sprites, menu, time: int) -> void:
 			_slant(canvas, i * 480 + band * 90 - fmod(time * 0.6, 90.0), 0, 36, 540, Color(Look.THEMES[clan].mid, 0.35), 60)
 		Look.particles(canvas, clan, time, half, 22, 0.7)
 	for i in 2:
+		if menu.racing and i == 1: # do outro lado, a montaria
+			canvas.draw_texture_rect_region(sprites.riders[menu.picks[0]], Rect2(822 - 144, 345 - 204, 288, 216), Rect2(96, 72 * (time / 14 % 2), 96, 72))
+			Look.text(canvas, "MONTARIA: %s" % Data.CREATURES[menu.picks[0]].to_upper(), 822, 366, 17, Look.THEMES[Data.FIGHTERS[menu.picks[0]].clan].accent)
+			continue
 		var waiting: bool = i == 1 and menu.side == 0
 		var x := 138.0 if i == 0 else 822.0
 		var key: String = menu.picks[i]
 		sprites.draw(canvas, sheet(i, menu.picks), idle(time), Vector2(x, 345), 1 if i == 0 else -1, 4.6, Color(0.15, 0.15, 0.18) if waiting else Color.WHITE)
 		Look.text(canvas, "VOCÊ" if i == 0 else rival, x, 366, 18, Look.THEMES[Data.FIGHTERS[key].clan].accent)
 
-	Look.text(canvas, "ESCOLHA SEU NINJA" if menu.side == 0 else "ESCOLHA O ADVERSÁRIO", 480, 34, 27, Color.WHITE, theme.mid)
+	Look.text(canvas, "ESCOLHA SEU CORREDOR" if menu.racing else ("ESCOLHA SEU NINJA" if menu.side == 0 else "ESCOLHA O ADVERSÁRIO"), 480, 34, 27, Color.WHITE, theme.mid)
 	var panel := Rect2(272, 46, 416, 330)
 	canvas.draw_rect(panel, Color(0, 0, 0, 0.76))
 	canvas.draw_rect(panel, theme.accent, false, 3)

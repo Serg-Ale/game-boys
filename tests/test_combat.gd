@@ -575,6 +575,7 @@ func _init() -> void:
 	var panel = Menu.new()
 	panel.handle("down", 0)
 	panel.handle("down", 0)
+	panel.handle("down", 0)
 	panel.handle("confirm", 0)
 	check(panel.screen == "controls", "o menu abre a tela de controles")
 	panel.handle("right", 0)

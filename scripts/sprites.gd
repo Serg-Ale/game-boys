@@ -16,6 +16,7 @@ var columns := {}
 var sparks := {}
 var stages := {}
 var creatures := {}
+var riders := {}
 
 func _init() -> void:
 	frames = FileAccess.get_file_as_string("res://assets/frames.txt").split("\n", false)
@@ -25,6 +26,7 @@ func _init() -> void:
 		sheets[key + "_form"] = load("res://assets/sprites/%s_form.png" % key)
 	for key in Data.ROSTER:
 		creatures[key] = load("res://assets/sprites/%s_creature.png" % key)
+		riders[key] = load("res://assets/kart/rider_%s.png" % key)
 	for kind in ["hit", "block"]:
 		sparks[kind] = load("res://assets/sprites/spark_%s.png" % kind)
 	for key in Data.ELEMENTS:

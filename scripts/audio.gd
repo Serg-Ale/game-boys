@@ -7,13 +7,15 @@ const Finisher = preload("res://scripts/finisher.gd")
 
 const EFFECTS := ["move", "confirm", "back", "versus", "punch_swing", "kick_swing", "hit", "hit_heavy", "block",
 	"jump", "land", "ko", "special_fire", "special_water", "special_plant", "special_electric", "special_earth",
-	"finish_call", "finish_blow", "finish_title", "victory", "roar_fire", "roar_water", "roar_plant", "roar_electric", "roar_earth", "roar_air", "special_air", "transform"]
+	"finish_call", "finish_blow", "finish_title", "victory", "roar_fire", "roar_water", "roar_plant", "roar_electric", "roar_earth", "roar_air", "special_air", "transform", "kart_boost", "kart_charge", "kart_bump", "count", "go", "lap"]
 const VOICES := 10
 const MUSIC_DB := -12.0
 
 var sounds := {}
 var players: Array = []
 var music := AudioStreamPlayer.new()
+var engine := AudioStreamPlayer.new()
+var skid := AudioStreamPlayer.new()
 var track := ""
 var muted := false
 var next_voice := 0
@@ -30,6 +32,13 @@ func _ready() -> void:
 		players.append(player)
 	music.volume_db = MUSIC_DB
 	add_child(music)
+	for pair in [[engine, "kart_engine"], [skid, "kart_drift"]]:
+		var stream: AudioStreamWAV = load("res://assets/sounds/%s.wav" % pair[1])
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = roundi(stream.get_length() * stream.mix_rate)
+		pair[0].stream = stream
+		add_child(pair[0])
 
 func play(name: String, volume_db := 0.0, pitch := 1.0) -> void:
 	var player: AudioStreamPlayer = players[next_voice]
@@ -61,6 +70,28 @@ func toggle_music() -> void:
 		music.stop()
 	elif track != "":
 		music.play()
+
+# Galope contínuo, mais agudo quanto mais rápido, e o chiado da derrapagem.
+func race_sounds(race) -> void:
+	var running: bool = absf(race.speed) > 0.4 and not race.finished
+	if running != engine.playing:
+		if running:
+			engine.play()
+		else:
+			engine.stop()
+	engine.pitch_scale = 0.6 + clampf(absf(race.speed) / race.max_speed, 0.0, 1.5)
+	engine.volume_db = -16.0
+	var sliding: bool = race.drift != 0 and not race.finished
+	if sliding != skid.playing:
+		if sliding:
+			skid.play()
+		else:
+			skid.stop()
+	skid.volume_db = -12.0
+
+func stop_race() -> void:
+	engine.stop()
+	skid.stop()
 
 func reset_fight() -> void:
 	last_states = [Fighter.State.IDLE, Fighter.State.IDLE]

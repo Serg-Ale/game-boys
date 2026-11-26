@@ -16,6 +16,7 @@ const Supers = preload("res://scripts/supers.gd")
 const SuperView = preload("res://scripts/super_view.gd")
 const Extras = preload("res://scripts/hud_extras.gd")
 const FormView = preload("res://scripts/form_view.gd")
+const RaceView = preload("res://scripts/kart/race_view.gd")
 
 # Tecla -> [ação do menu, teclado de onde vem ("" = qualquer)]
 const MENU_KEYS := {
@@ -47,6 +48,7 @@ var versus_age := VERSUS_FRAMES # menor que o total enquanto a tela de VS aparec
 var finisher_age := 0
 var audio = Audio.new()
 var paused := false
+var race = null # tela de corrida aberta
 var ghost := [0.0, 0.0] # rastro da vida perdida na barra
 var stick := {} # última direção do analógico de cada controle, no menu
 
@@ -59,6 +61,9 @@ func _ready() -> void:
 func _physics_process(_delta: float) -> void:
 	time += 1
 	_refresh_devices()
+	if race != null:
+		race.tick(Controls.read_race())
+		return
 	if fight != null and versus_age < VERSUS_FRAMES:
 		versus_age += 1
 		if versus_age == VERSUS_FRAMES:
@@ -165,7 +170,46 @@ func _toggle_pause(event: InputEvent) -> bool:
 	audio.play("confirm")
 	return true
 
+func _start_race() -> void:
+	_close_race()
+	position = Vector2.ZERO
+	shake = 0
+	race = RaceView.new()
+	add_child(race)
+	race.setup(menu.picks[0], audio)
+	audio.play_music(Data.FIGHTERS[menu.picks[0]].clan)
+	queue_redraw()
+
+func _close_race() -> void:
+	if race != null:
+		race.queue_free()
+		race = null
+		audio.stop_race()
+
+# Na corrida: Start / Enter pausa ou recomeça; Select / Esc sai.
+func _race_input(event: InputEvent) -> void:
+	var key: int = event.physical_keycode if event is InputEventKey and event.pressed and not event.echo else 0
+	var button: int = event.button_index if event is InputEventJoypadButton and event.pressed else -1
+	if key == KEY_M:
+		audio.toggle_music()
+	elif key == KEY_ESCAPE or button == JOY_BUTTON_BACK:
+		_close_race()
+		menu.open_select()
+		audio.play("back")
+		audio.play_music("menu")
+	elif key == KEY_ENTER or button == JOY_BUTTON_START:
+		if race.race.finished:
+			_start_race()
+		else:
+			race.paused = not race.paused
+			race.front.queue_redraw()
+			if race.paused:
+				audio.stop_race()
+
 func _unhandled_input(event: InputEvent) -> void:
+	if race != null:
+		_race_input(event)
+		return
 	if _toggle_pause(event):
 		return
 	var action := ""
@@ -216,13 +260,15 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	var before := [menu.screen, menu.option, menu.cursor, menu.side, menu.row, Controls.choices.duplicate()]
 	var result: String = menu.handle(action, player)
-	if result != "fight" and before != [menu.screen, menu.option, menu.cursor, menu.side, menu.row, Controls.choices]:
+	if result != "fight" and result != "race" and before != [menu.screen, menu.option, menu.cursor, menu.side, menu.row, Controls.choices]:
 		audio.play({"confirm": "confirm", "back": "back"}.get(action, "move"))
 	match result:
 		"saved":
 			Controls.save_choices()
 		"fight":
 			_start_fight()
+		"race":
+			_start_race()
 		"quit":
 			get_tree().quit()
 
@@ -244,6 +290,8 @@ func _stick_action(event: InputEventJoypadMotion) -> String:
 	return "down" if direction > 0 else "up"
 
 func _draw() -> void:
+	if race != null:
+		return
 	if fight == null:
 		if menu.screen == "title":
 			Screens.title(self, sprites, menu, time)

@@ -59,10 +59,25 @@ Atalhos de teste: F1 hitboxes e comando recebido, F2 enche o supremo, F3 libera 
 
 A lógica (`fight.gd`, `fighter.gd`) é separada do desenho e roda sem janela. Arte e som são originais e gerados por script:
 
-    python3 tools/make_sprites.py && python3 tools/make_creatures.py && python3 tools/make_sounds.py
+    python3 tools/make_sprites.py && python3 tools/make_creatures.py && python3 tools/make_sounds.py && python3 tools/make_track.py && python3 tools/make_riders.py
 
 Testes (um erro de sintaxe pode travar o processo, por isso o `timeout`):
 
     timeout 110 godot --headless --path . --script res://tests/test_combat.gd
 
 Equilíbrio entre CPUs: `godot --headless --path . --script res://tools/balance.gd`.
+
+## Corrida (protótipo de direção)
+
+Opção **Corrida** do menu: o ninja corre montado na própria criatura, em pseudo-3D. Por enquanto, uma pista (Vulcão da Chama), 3 voltas, sozinho, sem poderes.
+
+| Ação | Controle | Teclado |
+|---|---|---|
+| Virar | analógico ou direcional | A / D |
+| Acelerar | A ou RT | W |
+| Frear / ré | B ou LT | S |
+| Derrapar | RB | K ou Espaço |
+
+Segure a derrapagem virando para carregar o turbo (azul, laranja, roxo) e solte. Acelerar quando aparece o "1" dá arrancada. Lógica em `scripts/kart/race.gd`, desenho em `scripts/kart/race_view.gd`, pista em `tools/make_track.py`, montarias em `tools/make_riders.py`. Testes: `tests/test_race.gd`.
+
+**Próximos passos combinados:** 12 corredores com CPU, poderes em orbes, supremo, transformação como turbo, e uma pista por clã.

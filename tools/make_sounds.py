@@ -120,6 +120,21 @@ def roars():
         voice = tone(start, end, 0.9, shape, 0.7) * trill[:n]
         save(f"roar_{name}", mix((voice, 0.7, 0), (noise(0.9, grit, 0.8, 0.15), 0.6, 0)), 0.9)
 
+def kart():
+    """Sons da corrida. Os dois primeiros tocam em laço."""
+    t = times(1.0)
+    gallop = (tone(70, 70, 1.0, "saw", 0.0) * (0.55 + 0.45 * np.sign(np.sin(2 * np.pi * 14 * t)))
+              + tone(105, 105, 1.0, "triangle", 0.0) * 0.6)
+    save("kart_engine", gallop, 0.5)
+    scrape = noise(1.0, 0.35, 0.0, 0.0) * (0.7 + 0.3 * np.sin(2 * np.pi * 31 * t))
+    save("kart_drift", scrape, 0.35)
+    save("kart_boost", mix((noise(0.8, 0.2, 1.0, 0.1), 1.0, 0), (tone(160, 880, 0.5, "saw", 0.8), 0.6, 0)), 0.8)
+    save("kart_charge", arpeggio([79, 86], 0.04), 0.5)
+    save("kart_bump", mix((noise(0.15, 0.1, 3), 1.0, 0), (tone(140, 50, 0.16, "sine"), 1.0, 0)), 0.8)
+    save("count", tone(440, 440, 0.22, "square", 1.0, 0.25), 0.6)
+    save("go", tone(880, 880, 0.6, "square", 1.0, 0.25), 0.7)
+    save("lap", arpeggio([76, 79, 83, 88], 0.07), 0.6)
+
 def drum(kind):
     if kind == "kick":
         return tone(140, 40, 0.13, "sine", 2)
@@ -181,4 +196,5 @@ if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     effects()
     roars()
+    kart()
     music()
